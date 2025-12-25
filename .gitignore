@@ -1,0 +1,5 @@
+/models/
+/data/
+/plots/
+/.cache/
+scripts/__pycache__/binary_gate_io.cpython-312.pyc
