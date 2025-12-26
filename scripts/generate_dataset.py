@@ -36,29 +36,17 @@ def get_dataset(num_samples=10000):
     return mixed_dataset.take(num_samples)
 
 def generate_data(args):
-    model_id = "Qwen/Qwen3-0.6B"
+ 
+    model_id = "Qwen/Qwen3-0.6B" # Correct ID
     print(f"Loading {model_id}...")
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(
-            model_id, 
-            device_map="auto", 
-            torch_dtype=torch.float16,
-            trust_remote_code=True,
-            attn_implementation="eager"
-        )
-    except Exception as e:
-        print(f"Failed to load {model_id}: {e}")
-        print("Using fallback Qwen/Qwen2.5-0.5B-Instruct")
-        model_id = "Qwen/Qwen2.5-0.5B-Instruct"
-        tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(
-            model_id, 
-            device_map="auto", 
-            torch_dtype=torch.float16,
-            trust_remote_code=True,
-            attn_implementation="eager"
-        )
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id, 
+        device_map="auto", 
+        torch_dtype=torch.float16,
+        trust_remote_code=True,
+        attn_implementation="eager"
+    )
     
     # Storage for current batch
     # Structure: keys_storage[layer_idx][head_idx] -> list of tensors
@@ -243,7 +231,7 @@ def save_shards(keys, labels, out_dir, step):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num_samples", type=int, default=500)
-    parser.add_argument("--output_dir", type=str, default="data/train_qwen3_t05")
+    parser.add_argument("--output_dir", type=str, default="data/train_qwen3_regression")
     args = parser.parse_args()
     
     generate_data(args)
