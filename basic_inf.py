@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from SmartKVCache import SmartKVDynamicCache, GateLoader
 
-model_id = "Qwen/Qwen3-0.6B"
+model_id = "Qwen/Qwen3-4B"
 
 # 2. Load the tokenizer associated with the model
 # AutoTokenizer automatically selects the correct tokenizer class
@@ -21,14 +21,24 @@ model = AutoModelForCausalLM.from_pretrained(
 # Optional: set model to evaluation mode
 model.eval()
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model.to(device)
+
+gate_loader = GateLoader(
+    "models/gates_qwen3_4b_regression",
+    num_cache_layers=len(model.model.layers),
+    num_heads=model.config.num_key_value_heads,
+    device=device
+)
+
 cache = SmartKVDynamicCache(
             window_size=50,
             sink_size=4,
             cache_budget=50,
             num_layers=len(model.model.layers),
             num_kv_heads=model.config.num_key_value_heads,
-            device=torch.device('mps'),
-            gate_loader=GateLoader("models/gates_regression_v1")
+            device=device,
+            gate_loader=gate_loader
         )
 
 # cache.set_cache_should_prune(True)
