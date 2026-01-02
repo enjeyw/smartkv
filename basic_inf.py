@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from SmartKVCache import SmartKVDynamicCache, GateLoader
 
-model_id = "Qwen/Qwen3-4B"
+model_id = "Qwen/Qwen3-0.6B"
 
 # 2. Load the tokenizer associated with the model
 # AutoTokenizer automatically selects the correct tokenizer class
@@ -21,33 +21,19 @@ model = AutoModelForCausalLM.from_pretrained(
 # Optional: set model to evaluation mode
 model.eval()
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model.to(device)
-
-gate_loader = GateLoader(
-    "models/gates_qwen3_4b_regression",
-    num_cache_layers=len(model.model.layers),
-    num_heads=model.config.num_key_value_heads,
-    device=device
-)
-
 cache = SmartKVDynamicCache(
-            window_size=50,
+            window_size=100,
             sink_size=4,
-            cache_budget=50,
+            cache_budget=600,
             num_layers=len(model.model.layers),
             num_kv_heads=model.config.num_key_value_heads,
-            device=device,
-            gate_loader=gate_loader
+            device=torch.device('mps'),
+            gate_loader=GateLoader("models/gates_regression_v1_qwen3_06B")
         )
 
 # cache.set_cache_should_prune(True)
 
-prompt = (
-    f"You're playing a word puzzle in a competition. I give you two clues: Power-Tool, Sea-Creature. "
-    "You must guess two rhyming words, one related to each clue. "
-    "What are the rhyming words?"
-)
+from prompts import needle_in_haystack_test as prompt
 
 # 4. Prepare input text
 messages = [
@@ -63,7 +49,7 @@ inputs = tokenizer(prompt, return_tensors="pt").to(model.device) # Convert text 
 with torch.no_grad():
     outputs = model.generate(
         **inputs,
-        max_new_tokens=1000,
+        max_new_tokens=100,
         num_return_sequences=1,
         past_key_values=cache
     )
