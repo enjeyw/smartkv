@@ -157,13 +157,31 @@ class SmartKVDynamicLayer(DynamicLayer):
             importance = self.get_importance_for_keys(keys)
             importances.append((importance, token_index))
 
-        self.window_deque = deque(importances[-self.window_size:])
 
         if len(importances) < self.window_size:
+            self.window_deque = deque(importances[-self.window_size:])
             return
 
         self.high_value_indices = heapq.nlargest(self.cache_budget, importances[:-self.window_size])
 
+        sink_indices_to_keep = [index for index in range(0,self.sink_size)]
+        hv_indices_to_keep = [index for _, index in self.high_value_indices]
+        window_indices_to_keep = [index for _, index in importances[-self.window_size:]]
+
+        all_indices_to_keep = sink_indices_to_keep + hv_indices_to_keep + window_indices_to_keep
+
+        self.keys = self.keys[:, :, all_indices_to_keep, :]
+        self.values = self.values[:, :, all_indices_to_keep, :]
+
+        first_window_idx = len(sink_indices_to_keep) + len(hv_indices_to_keep)
+
+        self.high_value_indices = [(score, enum_idx + self.sink_size) for enum_idx, (score, _) in enumerate(self.high_value_indices)]
+
+        heapq.heapify(self.high_value_indices)
+
+        self.window_deque = deque(
+            [(score, enum_idx + first_window_idx) for enum_idx, (score, _) in enumerate(importances[-self.window_size:])]
+        )
 
     def process_single_token(
             self,
@@ -204,6 +222,9 @@ class SmartKVDynamicLayer(DynamicLayer):
             self.keys = new_token_keys
             self.values = new_token_values
             return
+
+        if self.keys.shape[2] > 400:
+            tt = 3
 
         num_tokens_in_cache = self.keys.shape[2]
         if num_tokens_in_cache < self.sink_size:
